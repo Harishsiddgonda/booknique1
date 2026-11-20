@@ -226,11 +226,49 @@ app.get("/api/:type", async (req, res, next) => {
 });
 
 // Serve static frontend in production
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
+const candidateDistPaths = [
+  distPath,
+  path.join(process.cwd(), "frontend", "dist"),
+  path.join(process.cwd(), "dist"),
+  path.join(__dirname, "dist")
+];
+const resolvedDistPath = candidateDistPaths.find(p => fs.existsSync(path.join(p, "index.html")));
+
+if (resolvedDistPath) {
+  console.log(`[Static] Serving frontend SPA from: ${resolvedDistPath}`);
+  app.use(express.static(resolvedDistPath));
   app.get("*", (req, res, next) => {
     if (req.path.startsWith("/api")) return next();
-    res.sendFile(path.join(distPath, "index.html"));
+    res.sendFile(path.join(resolvedDistPath, "index.html"));
+  });
+} else {
+  console.warn(`[Static] No built frontend dist found. Checked: ${candidateDistPaths.join(", ")}`);
+  app.get("/", (req, res) => {
+    res.send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>BOOKNIQUE API - Online</title>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; text-align: center; }
+          .card { background: #1e293b; border: 1px solid #334155; border-radius: 20px; padding: 40px; max-width: 500px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+          h1 { color: #f59e0b; font-size: 24px; margin-bottom: 8px; }
+          p { color: #94a3b8; font-size: 14px; line-height: 1.6; }
+          .badge { display: inline-block; background: #064e3b; color: #34d399; font-weight: bold; font-size: 12px; padding: 4px 12px; border-radius: 9999px; border: 1px solid #059669; margin: 16px 0; }
+          a { display: inline-block; background: #4f46e5; color: white; text-decoration: none; font-weight: bold; padding: 10px 20px; border-radius: 12px; margin-top: 12px; font-size: 14px; }
+        </style>
+      </head>
+      <body>
+        <div class="card">
+          <h1>📚 BOOKNIQUE</h1>
+          <p>Books & Toys Rental Management Platform</p>
+          <div class="badge">🟢 Backend API Active & Online</div>
+          <p>The REST API is running. Check health status:</p>
+          <a href="/api/health">Check API Health (/api/health)</a>
+        </div>
+      </body>
+      </html>
+    `);
   });
 }
 

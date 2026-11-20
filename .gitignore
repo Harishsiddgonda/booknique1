@@ -4,9 +4,7 @@ node_modules/
 package-lock.json
 
 # Builds & Outputs
-dist/
 build/
-*/dist/
 */build/
 .gradle/
 */.gradle/
